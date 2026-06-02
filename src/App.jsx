@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import Lenis from 'lenis'
 import SceneOne from './SceneOne'
 import SceneTwo from './SceneTwo'
+import SceneThree from './SceneThree'
 import RevealText from './RevealText'
 import Intro from './Intro'
 import RippleOverlay from './RippleOverlay'
@@ -10,15 +11,20 @@ import { playHover } from './sound'
 
 export default function App() {
   const pointer = useRef({ x: 0, y: 0, moved: false }) // 마우스 위치 (-1~1)
-  const frontRef = useRef(null) // 위 레이어(섹션1) DOM
+  const frontRef = useRef(null) // 맨 위 레이어(섹션1) DOM
+  const midRef = useRef(null) // 가운데 레이어(섹션2) DOM
   const [filterOn, setFilterOn] = useState(true) // 후처리(필터) ON/OFF, 기본 ON
   const [introDone, setIntroDone] = useState(false) // 인트로 로더 완료
   const [reveal1, setReveal1] = useState(false) // 섹션1 텍스트 reveal
   const [reveal2, setReveal2] = useState(false) // 섹션2 텍스트 reveal
+  const [reveal3, setReveal3] = useState(false) // 섹션3 텍스트 reveal
   const introDoneRef = useRef(false)
-  const reveal1Cur = useRef(false) // 현재 reveal1 상태 추적 (중복 setState 방지)
+  const reveal1Cur = useRef(false) // 현재 reveal 상태 추적 (중복 setState 방지)
   const reveal2Cur = useRef(false)
-  const progress = useRef(0) // 스크롤 진행도(0~1, eased) → 카메라 무빙에 사용
+  const reveal3Cur = useRef(false)
+  // 전체 스크롤(0~1)을 2단 전환으로 분할한 진행도 → 각 섹션 카메라에 전달.
+  const prog1 = useRef(0) // 섹션1→2 전환 (스크롤 0~0.5)
+  const prog2 = useRef(0) // 섹션2→3 전환 (스크롤 0.5~1)
   const lenisRef = useRef(null) // 섹션 스냅(scrollTo)에 사용
 
   // Lenis: 관성 있는 부드러운 스크롤 (휠을 굴리면 쫀득하게 감속)
@@ -75,51 +81,53 @@ export default function App() {
       snapping = false
     }
 
-    const loop = () => {
-      current += (target - current) * 0.09 // 0에 가까울수록 더 미끄러지듯
-      progress.current = current // 카메라 무빙용 진행도 공유
-
-      // 스냅: 사용자가 입력을 멈췄는데 전환 중간(0.04~0.96)에 걸쳐 있으면
-      // '스크롤 방향'으로 정착 — 아래로 가던 중이면 다음 섹션, 위로면 이전 섹션
-      const now = performance.now()
-      if (!snapping && now - lastUser > 160 && current > 0.04 && current < 0.96) {
-        const max = document.body.scrollHeight - window.innerHeight
-        let dest
-        if (dir >= 0) dest = target > 0.12 ? max : 0 // 아래로: 조금만 내려도 다음 섹션
-        else dest = target < 0.88 ? 0 : max // 위로: 조금만 올려도 이전 섹션
-        snapping = true
-        if (lenisRef.current) lenisRef.current.scrollTo(dest, { duration: 0.9 })
-      }
-
-      // 섹션을 드나들 때마다 텍스트 reveal 재생 (히스테리시스로 깜빡임 방지).
-      // 리셋은 해당 섹션이 화면 밖일 때 일어나서 보이지 않음.
-      if (introDoneRef.current) {
-        // 섹션1 (위쪽)
-        if (current < 0.45 && !reveal1Cur.current) {
-          reveal1Cur.current = true
-          setReveal1(true)
-        } else if (current > 0.55 && reveal1Cur.current) {
-          reveal1Cur.current = false
-          setReveal1(false)
-        }
-        // 섹션2 (아래쪽)
-        if (current > 0.55 && !reveal2Cur.current) {
-          reveal2Cur.current = true
-          setReveal2(true)
-        } else if (current < 0.45 && reveal2Cur.current) {
-          reveal2Cur.current = false
-          setReveal2(false)
-        }
-      }
-
-      const center = 115 - current * 130 // 115%(안 잘림) → -15%(완전히 잘림)
+    // 한 레이어의 대각선 컷 클립 적용 (p: 0=안 잘림 → 1=완전히 걷힘)
+    const applyClip = (el, p) => {
+      if (!el) return
+      const center = 115 - p * 130 // 115%(안 잘림) → -15%(완전히 잘림)
       const yL = center + SLANT / 2
       const yR = center - SLANT / 2
-      if (frontRef.current) {
-        frontRef.current.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${yR}%, 0% ${yL}%)`
-        // 섹션2 영역에선 위 레이어가 클릭을 막지 않도록 포인터 이벤트 차단
-        frontRef.current.style.pointerEvents = current > 0.5 ? 'none' : 'auto'
+      el.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${yR}%, 0% ${yL}%)`
+      // 절반 이상 걷히면 아래 섹션 클릭을 막지 않도록 포인터 이벤트 차단
+      el.style.pointerEvents = p > 0.5 ? 'none' : 'auto'
+    }
+
+    const REST = [0, 0.5, 1] // 섹션1·2·3 정착 지점 (전체 스크롤 기준)
+
+    const loop = () => {
+      current += (target - current) * 0.09 // 0에 가까울수록 더 미끄러지듯
+      // 전체 스크롤(0~1)을 두 전환으로 분할
+      prog1.current = Math.min(1, current / 0.5) // 섹션1→2 (0~0.5)
+      prog2.current = Math.max(0, Math.min(1, (current - 0.5) / 0.5)) // 섹션2→3 (0.5~1)
+
+      // 스냅: 입력을 멈췄고 정착 지점 근처가 아니면 '스크롤 방향'의 다음/이전 섹션으로
+      const now = performance.now()
+      const nearRest = REST.some((r) => Math.abs(current - r) < 0.04)
+      if (!snapping && now - lastUser > 160 && !nearRest) {
+        const max = document.body.scrollHeight - window.innerHeight
+        let destP
+        if (dir >= 0) destP = current < 0.5 ? 0.5 : 1 // 아래로: 다음 정착 지점
+        else destP = current > 0.5 ? 0.5 : 0 // 위로: 이전 정착 지점
+        snapping = true
+        if (lenisRef.current) lenisRef.current.scrollTo(destP * max, { duration: 0.9 })
       }
+
+      // 섹션을 드나들 때마다 텍스트 reveal 재생 (경계에 약간의 간격을 둬 깜빡임 방지).
+      if (introDoneRef.current) {
+        const setReveal = (curRef, want, setter) => {
+          if (curRef.current !== want) {
+            curRef.current = want
+            setter(want)
+          }
+        }
+        setReveal(reveal1Cur, current < 0.28, setReveal1) // 섹션1 (상단)
+        setReveal(reveal2Cur, current > 0.3 && current < 0.7, setReveal2) // 섹션2 (중간)
+        setReveal(reveal3Cur, current > 0.72, setReveal3) // 섹션3 (하단)
+      }
+
+      // 위 두 레이어를 각각 자기 전환 진행도로 걷어냄
+      applyClip(frontRef.current, prog1.current) // 섹션1
+      applyClip(midRef.current, prog2.current) // 섹션2
       raf = requestAnimationFrame(loop)
     }
 
@@ -162,10 +170,29 @@ export default function App() {
         </button>
       </header>
 
-      {/* 아래 레이어: 섹션 2 (스크롤하면 위 레이어가 걷히며 드러남) */}
+      {/* 맨 아래 레이어: 섹션 3 (마지막에 드러남, trecoil.glb 오브젝트) */}
       <div className="layer back">
         <Canvas camera={{ position: [0, 0, 8], fov: 45 }} dpr={[1, 2]}>
-          <SceneTwo pointer={pointer} progress={progress} filter={filterOn} />
+          <SceneThree pointer={pointer} progress={prog2} filter={filterOn} />
+        </Canvas>
+        <div className="overlay">
+          <RevealText
+            className="headline top-left"
+            lines={['BUILT', 'TO', 'RECOIL']}
+            play={reveal3}
+          />
+          <p className={`body top-left-text fade ${reveal3 ? 'play' : ''}`} style={{ transitionDelay: '0.35s' }}>
+            Precision-engineered systems that absorb the shock and spring back stronger.
+            This is conviction, made tangible.
+          </p>
+          <div className="tag bottom-left">//02<br />PORTFOLIO</div>
+        </div>
+      </div>
+
+      {/* 가운데 레이어: 섹션 2 (스크롤하면 걷히며 섹션3 이 드러남) */}
+      <div className="layer mid" ref={midRef}>
+        <Canvas camera={{ position: [0, 0, 8], fov: 45 }} dpr={[1, 2]}>
+          <SceneTwo pointer={pointer} progress={prog2} filter={filterOn} />
         </Canvas>
         <div className="overlay">
           <RevealText
@@ -188,10 +215,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* 위 레이어: 섹션 1 (대각선으로 잘려 위로 사라짐) */}
+      {/* 맨 위 레이어: 섹션 1 (대각선으로 잘려 위로 사라짐) */}
       <div className="layer front" ref={frontRef}>
         <Canvas camera={{ position: [0, 0, 8], fov: 45 }} dpr={[1, 2]}>
-          <SceneOne pointer={pointer} progress={progress} play={introDone} filter={filterOn} />
+          <SceneOne pointer={pointer} progress={prog1} play={introDone} filter={filterOn} />
         </Canvas>
         <div className="overlay">
           <RevealText

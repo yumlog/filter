@@ -8,7 +8,7 @@ import * as THREE from 'three'
 // 호버한 부위에만 '두께 있는 파편'이 돋아나 튀어나오며,
 // 파편도 본체와 같은 투과/굴절 재질(MeshTransmissionMaterial)을 써서 유리 질감을 가짐.
 
-const fresnelVertex = /* glsl */ `
+export const fresnelVertex = /* glsl */ `
   varying vec3 vNormal;
   varying vec3 vView;
   void main() {
@@ -18,7 +18,7 @@ const fresnelVertex = /* glsl */ `
     gl_Position = projectionMatrix * viewMatrix * wp;
   }
 `
-const fresnelFragment = /* glsl */ `
+export const fresnelFragment = /* glsl */ `
   varying vec3 vNormal;
   varying vec3 vView;
   uniform vec3 uColor;
@@ -31,7 +31,7 @@ const fresnelFragment = /* glsl */ `
 `
 
 // 공통 크리스탈(투과) 재질 파라미터
-const crystalProps = {
+export const crystalProps = {
   samples: 16,
   resolution: 1024,
   transmission: 1,

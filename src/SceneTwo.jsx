@@ -18,10 +18,10 @@ export default function SceneTwo({ pointer, progress, filter = true }) {
         pointer={pointer}
         progress={progress}
         strength={0.3}
-        zoomFrom={5}
-        zoomTo={8}
-        orbitFrom={-0.5}
-        orbitTo={0}
+        zoomFrom={8}
+        zoomTo={5}
+        orbitFrom={0}
+        orbitTo={0.5}
         yLift={0.3}
       />
       <ParticleObject pointer={pointer} />

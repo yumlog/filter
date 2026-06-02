@@ -45,22 +45,33 @@ html.lenis body {
   display: block;
 }
 
-/* 아래 레이어: 섹션 2 (배경에 깔림) */
+/* 맨 아래 레이어: 섹션 3 (배경에 깔림, 마지막에 드러남) */
 .back {
   z-index: 1;
+  cursor: grab; /* 드래그로 오브젝트 회전 가능 (섹션3에서만 최상단이라 여기서만 보임) */
+}
+.back:active {
+  cursor: grabbing;
 }
 
-/* 위 레이어: 섹션 1 — 내용은 고정, 대각선 컷 라인만 위로 올라가며 잘림 */
-.front {
+/* 가운데 레이어: 섹션 2 — 대각선 컷 라인이 올라가며 잘려 섹션3 을 드러냄 */
+.mid {
   z-index: 2;
+  clip-path: polygon(0% 0%, 100% 0%, 100% 107%, 0% 123%);
+  will-change: clip-path;
+}
+
+/* 맨 위 레이어: 섹션 1 — 내용은 고정, 대각선 컷 라인만 위로 올라가며 잘림 */
+.front {
+  z-index: 3;
   /* 초기엔 컷 라인이 화면 밖(아래)이라 안 잘림 = 꽉 찬 상태 */
   clip-path: polygon(0% 0%, 100% 0%, 100% 107%, 0% 123%);
   will-change: clip-path;
 }
 
-/* 스크롤 길이 확보용 (보이지 않음) */
+/* 스크롤 길이 확보용 (보이지 않음) — 전환이 2단계라 더 길게 */
 .scroll-spacer {
-  height: 220vh;
+  height: 340vh;
   pointer-events: none;
 }
 
@@ -160,6 +171,15 @@ html.lenis body {
 }
 .mid-left-text {
   left: 40px;
+}
+.top-left {
+  left: 40px;
+  top: 16vh;
+}
+/* .body 가 파일 뒤쪽에서 top 을 덮어쓰지 않도록 두 클래스 선택자로 우선순위 ↑ */
+.body.top-left-text {
+  left: 40px;
+  top: 46vh;
 }
 
 .hint {
