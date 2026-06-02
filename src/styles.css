@@ -1,0 +1,283 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+body {
+  background: #0e2c54;
+  color: #eaf2ff;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+/* Lenis 부드러운 스크롤 기본 스타일 */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+#root {
+  width: 100%;
+}
+
+/* ---------- 레이어 (두 섹션을 위/아래로 겹침) ---------- */
+.layer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.layer canvas {
+  display: block;
+}
+
+/* 아래 레이어: 섹션 2 (배경에 깔림) */
+.back {
+  z-index: 1;
+}
+
+/* 위 레이어: 섹션 1 — 내용은 고정, 대각선 컷 라인만 위로 올라가며 잘림 */
+.front {
+  z-index: 2;
+  /* 초기엔 컷 라인이 화면 밖(아래)이라 안 잘림 = 꽉 찬 상태 */
+  clip-path: polygon(0% 0%, 100% 0%, 100% 107%, 0% 123%);
+  will-change: clip-path;
+}
+
+/* 스크롤 길이 확보용 (보이지 않음) */
+.scroll-spacer {
+  height: 220vh;
+  pointer-events: none;
+}
+
+/* ---------- 물결 오버레이 (최상단, 클릭 통과) ---------- */
+.ripple-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 6; /* 섹션 레이어(1~2) 위, 헤더(10) 아래 */
+  pointer-events: none;
+  mix-blend-mode: screen; /* 아래 콘텐츠와 블렌딩 → 빛 필터처럼 스며듦 */
+}
+.ripple-overlay canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ---------- 상단 고정 바 ---------- */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 28px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.logo {
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+}
+
+.sound-toggle {
+  pointer-events: auto;
+  background: none;
+  border: none;
+  color: #eaf2ff;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wave {
+  opacity: 0.4;
+  transition: opacity 0.3s;
+}
+.wave.on {
+  opacity: 1;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* ---------- 텍스트 오버레이 ---------- */
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+.headline {
+  position: absolute;
+  font-weight: 800;
+  font-size: clamp(28px, 4vw, 56px);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  pointer-events: auto;
+}
+
+.bottom-left {
+  left: 40px;
+  bottom: 80px;
+}
+.bottom-right {
+  right: 40px;
+  bottom: 80px;
+  text-align: right;
+}
+.mid-left {
+  left: 40px;
+  top: 22vh;
+}
+.mid-left-text {
+  left: 40px;
+}
+
+.hint {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  opacity: 0.8;
+  pointer-events: auto;
+}
+
+.body {
+  position: absolute;
+  top: 52vh;
+  max-width: 360px;
+  font-size: 15px;
+  line-height: 1.6;
+  opacity: 0.85;
+}
+
+.cta {
+  position: absolute;
+  top: 76vh;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(159, 210, 255, 0.5);
+  color: #eaf2ff;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  padding: 14px 26px;
+  border-radius: 30px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.3s, border-color 0.3s;
+}
+.cta:hover {
+  background: rgba(159, 210, 255, 0.15);
+  border-color: #9fd2ff;
+}
+
+.tag {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  opacity: 0.7;
+}
+
+/* ---------- 인트로 로더 ---------- */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #0e2c54;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  transition: opacity 0.8s ease;
+}
+.intro.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+.intro-logo {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.35em;
+  opacity: 0.9;
+}
+.intro-bar {
+  width: 220px;
+  height: 1px;
+  background: rgba(159, 210, 255, 0.18);
+  overflow: hidden;
+}
+.intro-bar span {
+  display: block;
+  height: 100%;
+  background: #9fd2ff;
+  box-shadow: 0 0 12px rgba(159, 210, 255, 0.8);
+  transition: width 0.2s ease;
+}
+.intro-pct {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  opacity: 0.55;
+}
+
+/* ---------- 텍스트 등장 모션 ---------- */
+/* 줄 단위 mask 슬라이드업 */
+.reveal-line {
+  display: block;
+  overflow: hidden;
+}
+.reveal-inner {
+  display: inline-block;
+  transform: translateY(110%);
+  opacity: 0;
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.9s ease;
+}
+.reveal-inner.play {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* 단순 페이드업 (본문/버튼/힌트) */
+.fade {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fade.play {
+  opacity: 0.85;
+  transform: translateY(0);
+}
+.cta.fade.play {
+  opacity: 1; /* 버튼은 또렷하게 */
+}
